@@ -25,21 +25,21 @@ export function DealCard({ deal, partnerSite }: DealCardProps) {
       target="_blank"
       rel="noopener noreferrer"
       onClick={handleClick}
-      className="group block rounded-lg border border-white/10 bg-white/5 overflow-hidden hover:border-[#00ddff]/50 transition-all"
+      className="group block rounded-lg overflow-hidden border border-white/10 hover:border-[#00ddff]/50 transition-all"
     >
-      <div className="aspect-square bg-white/5 p-6 flex items-center justify-center">
+      <div className="aspect-square bg-white relative">
         {deal.image_url ? (
           <img
             src={deal.image_url}
             alt={deal.name}
-            className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform"
+            className="absolute inset-0 w-full h-full object-contain p-4 group-hover:scale-105 transition-transform"
           />
         ) : (
-          <div className="text-white/30 text-sm">No image</div>
+          <div className="absolute inset-0 flex items-center justify-center text-zinc-400 text-sm">No image</div>
         )}
       </div>
 
-      <div className="p-4">
+      <div className="p-4 bg-white/5">
         <div className="flex items-center justify-between gap-2 mb-2">
           <span className="text-xs font-medium text-[#3b82f6] uppercase tracking-wide">
             {deal.category}
