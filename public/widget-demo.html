@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DealSignal Widget Demo</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0d1015;
+      color: white;
+      padding: 40px;
+    }
+    h1 { margin-bottom: 8px; }
+    p { color: rgba(255,255,255,0.6); margin-bottom: 40px; }
+    .formats {
+      display: flex;
+      gap: 48px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+    .section { margin-bottom: 48px; }
+    .section h2 {
+      font-size: 12px;
+      color: rgba(255,255,255,0.5);
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 500;
+    }
+    code {
+      display: block;
+      background: rgba(255,255,255,0.06);
+      padding: 12px 16px;
+      border-radius: 6px;
+      font-size: 11px;
+      margin-top: 12px;
+      color: rgba(255,255,255,0.5);
+      word-break: break-all;
+      max-width: 300px;
+    }
+  </style>
+</head>
+<body>
+  <h1>DealSignal Widget</h1>
+  <p>Preview widget formats for partner sites</p>
+
+  <div class="formats">
+    <div class="section">
+      <h2>Leaderboard (728×90)</h2>
+      <script src="/widget.js" data-partner="demo" data-format="leaderboard"></script>
+      <code>&lt;script src="https://dealsignal.vercel.app/widget.js" data-partner="wzstats" data-format="leaderboard"&gt;&lt;/script&gt;</code>
+    </div>
+
+    <div class="section">
+      <h2>Skyscraper (160×600)</h2>
+      <script src="/widget.js" data-partner="demo" data-format="skyscraper"></script>
+      <code>&lt;script src="..." data-format="skyscraper"&gt;&lt;/script&gt;</code>
+    </div>
+
+    <div class="section">
+      <h2>Sidebar (300×auto)</h2>
+      <script src="/widget.js" data-partner="demo" data-format="sidebar"></script>
+      <code>&lt;script src="..." data-format="sidebar"&gt;&lt;/script&gt;</code>
+    </div>
+  </div>
+</body>
+</html>
