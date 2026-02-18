@@ -41,7 +41,8 @@
   const styles = `
     :host {
       display: block;
-      width: ${format.width};
+      width: 100%;
+      max-width: ${format.width};
       ${format.height !== 'auto' ? `height: ${format.height};` : ''}
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
@@ -58,6 +59,35 @@
       display: flex;
       flex-direction: ${isLeaderboard ? 'row' : 'column'};
       ${isLeaderboard ? 'align-items: center;' : ''}
+    }
+
+    @media (max-width: 600px) {
+      :host {
+        max-width: 100%;
+        height: auto;
+      }
+      .ds-widget {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .ds-branding {
+        padding: 12px 16px !important;
+        border-right: none !important;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+        height: auto !important;
+      }
+      .ds-deals {
+        flex-direction: column !important;
+      }
+      .ds-deal {
+        padding: 12px 16px !important;
+        height: auto !important;
+        border-right: none !important;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+      }
+      .ds-deal:last-child {
+        border-bottom: none;
+      }
     }
 
     .ds-branding {
