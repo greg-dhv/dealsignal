@@ -10,7 +10,7 @@
   };
 
   const formats = {
-    leaderboard: { width: '728px', height: '90px', limit: 1 },
+    leaderboard: { width: '728px', height: '90px', limit: 2 },
     skyscraper: { width: '160px', height: '600px', limit: 3 },
     sidebar: { width: '300px', height: 'auto', limit: 2 },
   };
@@ -19,6 +19,20 @@
   const limit = parseInt(script.getAttribute('data-limit')) || format.limit;
   const isLeaderboard = config.format === 'leaderboard';
   const isSkyscraper = config.format === 'skyscraper';
+
+  // Truncate long Amazon titles to clean short names
+  function cleanName(name, maxLength = 40) {
+    if (!name) return '';
+    // Remove common Amazon SEO suffixes
+    let clean = name
+      .replace(/\s*[-–|,]\s*(Amazon|for|with|and).*$/i, '')
+      .replace(/\s*\([^)]*\)\s*$/, '')  // Remove trailing parentheses
+      .trim();
+    if (clean.length > maxLength) {
+      clean = clean.substring(0, maxLength).trim() + '…';
+    }
+    return clean;
+  }
 
   const container = document.createElement('div');
   container.id = 'dealsignal-widget';
@@ -67,6 +81,16 @@
       font-weight: 500;
       color: rgba(255,255,255,0.9);
       letter-spacing: -0.01em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      ${isSkyscraper ? 'justify-content: center;' : ''}
+    }
+
+    .ds-icon {
+      width: 14px;
+      height: 14px;
+      opacity: 0.7;
     }
 
     .ds-subtitle {
@@ -83,27 +107,29 @@
     }
 
     .ds-deal {
-      ${isLeaderboard ? 'flex: 1; height: 100%;' : ''}
+      ${isLeaderboard ? 'height: 100%; flex-shrink: 0;' : ''}
       display: flex;
       ${isSkyscraper ? 'flex-direction: column; align-items: center; text-align: center;' : 'flex-direction: row;'}
       align-items: center;
-      gap: ${isSkyscraper ? '10px' : '16px'};
-      padding: ${isLeaderboard ? '0 24px' : isSkyscraper ? '16px 14px' : '14px 20px'};
+      gap: ${isSkyscraper ? '10px' : '12px'};
+      padding: ${isLeaderboard ? '0 16px' : isSkyscraper ? '16px 14px' : '14px 20px'};
       text-decoration: none;
       color: white;
       transition: background 0.15s;
-      ${!isLeaderboard ? 'border-bottom: 1px solid rgba(255,255,255,0.05);' : ''}
+      ${isLeaderboard ? 'border-right: 1px solid rgba(255,255,255,0.06);' : 'border-bottom: 1px solid rgba(255,255,255,0.05);'}
     }
+    .ds-deal:last-child { border-right: none; }
     .ds-deal:last-child { border-bottom: none; }
     .ds-deal:hover { background: rgba(255,255,255,0.03); }
 
     .ds-image {
-      width: ${isSkyscraper ? '52px' : '44px'};
-      height: ${isSkyscraper ? '52px' : '44px'};
+      width: ${isSkyscraper ? '64px' : '56px'};
+      height: ${isSkyscraper ? '64px' : '56px'};
       object-fit: contain;
-      background: rgba(255,255,255,0.04);
+      background: white;
       border-radius: 8px;
       flex-shrink: 0;
+      padding: 4px;
     }
 
     .ds-info {
@@ -118,24 +144,19 @@
       font-weight: 500;
       color: rgba(255,255,255,0.9);
       line-height: 1.3;
-      ${isSkyscraper ? '' : 'white-space: nowrap; overflow: hidden; text-overflow: ellipsis;'}
+      overflow: hidden;
+      ${isSkyscraper ? `
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+      ` : 'white-space: nowrap; text-overflow: ellipsis; max-width: 180px;'}
     }
 
     .ds-status {
-      font-size: 11px;
+      font-size: 12px;
+      font-weight: 600;
       color: #35ffb5;
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      ${isSkyscraper ? 'justify-content: center;' : ''}
-    }
-
-    .ds-dot {
-      width: 6px;
-      height: 6px;
-      background: #35ffb5;
-      border-radius: 50%;
-      flex-shrink: 0;
+      ${isSkyscraper ? 'text-align: center;' : ''}
     }
 
     .ds-footer {
@@ -178,14 +199,14 @@
 
       const dealsUrl = config.dealsUrl || `${config.apiBase}/deals?partner=${config.partner}`;
 
+      const nameLimit = isSkyscraper ? 50 : 28;
       const dealsHtml = deals.map(deal => `
         <a href="${deal.affiliate_url || '#'}" target="_blank" rel="noopener noreferrer" class="ds-deal" data-product-id="${deal.id}">
           <img src="${deal.image_url || ''}" alt="" class="ds-image" />
           <div class="ds-info">
-            <div class="ds-name">${deal.name}</div>
+            <div class="ds-name">${cleanName(deal.name, nameLimit)}</div>
             <div class="ds-status">
-              <span class="ds-dot"></span>
-              Price drop
+              ↓ ${deal.discount_percent}%
             </div>
           </div>
         </a>
@@ -196,7 +217,7 @@
         html = `
           <div class="ds-widget">
             <div class="ds-branding">
-              <div class="ds-title">Gaming gear deals</div>
+              <div class="ds-title"><svg class="ds-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Gaming gear tracker</div>
               <a href="${dealsUrl}" target="_blank" rel="noopener noreferrer" class="ds-link">View all deals</a>
             </div>
             <div class="ds-deals">${dealsHtml}</div>
@@ -206,7 +227,7 @@
         html = `
           <div class="ds-widget">
             <div class="ds-branding">
-              <div class="ds-title">Gaming gear deals</div>
+              <div class="ds-title"><svg class="ds-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Gaming gear tracker</div>
             </div>
             <div class="ds-deals">${dealsHtml}</div>
             <div class="ds-footer">
