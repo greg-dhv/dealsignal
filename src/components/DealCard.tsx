@@ -27,7 +27,7 @@ export function DealCard({ deal, partnerSite }: DealCardProps) {
       onClick={handleClick}
       className="group block rounded-lg overflow-hidden border border-white/10 hover:border-[#00ddff]/50 transition-all"
     >
-      <div className="aspect-square bg-white relative">
+      <div className="aspect-square bg-white relative rounded-t-lg">
         {deal.image_url ? (
           <img
             src={deal.image_url}

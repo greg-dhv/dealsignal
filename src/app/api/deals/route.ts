@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const category = searchParams.get("category");
-  const limit = parseInt(searchParams.get("limit") || "10");
+  const limitParam = searchParams.get("limit");
 
   const supabase = await createClient();
 
@@ -22,8 +22,12 @@ export async function GET(request: Request) {
     `)
     .eq("is_active", true)
     .gt("prices.discount_percent", 0)
-    .order("checked_at", { referencedTable: "prices", ascending: false })
-    .limit(limit);
+    .order("checked_at", { referencedTable: "prices", ascending: false });
+
+  // Only apply limit if explicitly provided
+  if (limitParam) {
+    query = query.limit(parseInt(limitParam));
+  }
 
   if (category) {
     query = query.eq("category", category);
