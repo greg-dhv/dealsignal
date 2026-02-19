@@ -47,7 +47,8 @@ export async function GET(request: Request) {
 
     return {
       id: product.id,
-      name: product.name,
+      name: product.display_name || product.name,
+      full_name: product.name,
       category: product.category,
       image_url: product.image_url,
       affiliate_url: product.affiliate_url,
