@@ -1,5 +1,6 @@
 import { config } from "dotenv";
 import { createClient } from "@supabase/supabase-js";
+import Anthropic from "@anthropic-ai/sdk";
 
 // Load .env.local
 config({ path: ".env.local" });
@@ -9,23 +10,51 @@ const KEEPA_API_KEY = "8eu8vlvvp5ho0v18jtgjfcvoou02au4iicv72ij6ub5bgdohcbr1qc849
 const AMAZON_TAG = "wzstats-20";
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY!;
+
+// Initialize Anthropic client
+const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
 
 // ASINs to import
 const ASINS = [
-  "B0FD6697KT", "B0CJVQFZ1S", "B0CQKKHT5J", "B0DB6S6R89", "B0DB6QT8K6",
-  "B0B789CGGQ", "B0DTB3F17W", "B0FD41XC3P", "B0CQKKHT5J", "B0F8B7VFB1",
-  "B0CQKL4YTB", "B0BSYFB99D", "B0F3QDLZKG", "B0F3QKLDLM", "B0FDP42BTF",
-  "B08141GQQG", "B0DNTLYK6Z", "B0FRP6CMZ5", "B0DFX4TPS6", "B0F94KTF6C",
-  "B0FH5YWH7B", "B0CYWFH5Y9", "B0DBB38QK1", "B0DB9LQ7R5", "B0FHHNQ4Y1",
-  "B0CZPLQZ8P", "B0FNQDNGXY", "B09DCBJWDB", "B0CR45VFTG", "B0D9YK6K68",
-  "B0FW3MQHQ9", "B0F1MPPJJQ", "B0BLJLP7FM", "B0FQNQ76JY", "B0F21TVZ8V",
-  "B0FW3MQHQ9", "B0CZNNFBCW", "B0DSZX1BH7", "B0FPFC4FQK", "B0CXPM1HH1",
-  "B0F66KXN58", "B0CCVFFJ6Z", "B0D7CMT384", "B0DSZSTWQZ", "B0CZNPC87C",
-  "B0FFTFYGLV", "B0CSJPDYDN", "B09V1KJ3J4", "B0FFTFYGLV", "B0CPFWXMBL"
+  "B0FSWTF7RY", "B0CTJ5F2FB", "B00N1YPXW2", "B0FRFZ9M66", "B0CWNJ7W12",
+  "B0C47ZX1WB", "B0F6JWQQB6", "B0DZCSBCLF", "B0G2LY516S", "B0FLVK4MT3",
+  "B0F1HX3WXX", "B0F1J1JTKP", "B0FH5YWH7B", "B0GCZNDC82", "B0CZX7MB48",
+  "B0FKB4RDTX", "B0B55T9RTP", "B08M3WY4RV"
 ];
 
 // Remove duplicates
 const uniqueASINs = [...new Set(ASINS)];
+
+// Generate a clean display name using Claude
+async function generateDisplayName(title: string): Promise<string> {
+  try {
+    const response = await anthropic.messages.create({
+      model: "claude-3-5-haiku-latest",
+      max_tokens: 100,
+      messages: [
+        {
+          role: "user",
+          content: `Convert this Amazon product title into a short, clean display name (2-5 words max). Keep brand name and key product identifier. No descriptions, no features, no "for gaming" etc.
+
+Title: "${title}"
+
+Reply with ONLY the display name, nothing else.`,
+        },
+      ],
+    });
+
+    const content = response.content[0];
+    if (content.type === "text") {
+      return content.text.trim();
+    }
+    return title.split(/[,:\-–]/).at(0)?.trim() || title;
+  } catch (err) {
+    console.error("Error generating display name:", err);
+    // Fallback to simple heuristic
+    return title.split(/[,:\-–]/).at(0)?.trim() || title;
+  }
+}
 
 // Category mapping based on common gaming product keywords
 function detectCategory(title: string): string {
@@ -164,12 +193,16 @@ async function importProducts() {
       const imageUrl = buildImageUrl(product.imagesCSV);
       const affiliateUrl = `https://www.amazon.com/dp/${asin}?tag=${AMAZON_TAG}`;
 
+      // Generate clean display name
+      const displayName = await generateDisplayName(title);
+
       // Insert into products table
       const { data: productData, error: productError } = await supabase
         .from("products")
         .upsert({
           amazon_asin: asin,
           name: title,
+          display_name: displayName,
           category: category,
           image_url: imageUrl,
           affiliate_url: affiliateUrl,
@@ -199,7 +232,7 @@ async function importProducts() {
         console.error(`Error inserting price for ${asin}:`, priceError);
       }
 
-      console.log(`✓ ${title.substring(0, 50)}... | $${finalCurrentPrice} (avg: $${originalPrice}) | ${category}`);
+      console.log(`✓ ${displayName} | $${finalCurrentPrice} (avg: $${originalPrice}) | ${category}`);
       imported++;
 
     } catch (err) {
