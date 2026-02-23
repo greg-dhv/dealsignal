@@ -1,10 +1,29 @@
 "use client";
 
-import { Deal } from "@/types/database";
+import { Deal, SignalLabel } from "@/types/database";
 
 type DealCardProps = {
   deal: Deal;
   partnerSite?: string;
+};
+
+const SIGNAL_LABELS: Record<Exclude<SignalLabel, null>, { text: string; className: string }> = {
+  historical_low: {
+    text: "Historical Low",
+    className: "bg-gradient-to-r from-orange-500 to-red-500 text-white",
+  },
+  low_90d: {
+    text: "90-Day Low",
+    className: "bg-gradient-to-r from-purple-500 to-pink-500 text-white",
+  },
+  low_30d: {
+    text: "30-Day Low",
+    className: "bg-gradient-to-r from-blue-500 to-cyan-500 text-white",
+  },
+  recent_drop: {
+    text: "Price Drop",
+    className: "bg-gradient-to-r from-green-500 to-emerald-500 text-white",
+  },
 };
 
 export function DealCard({ deal, partnerSite }: DealCardProps) {
@@ -28,6 +47,13 @@ export function DealCard({ deal, partnerSite }: DealCardProps) {
       className="group block rounded-lg overflow-hidden border border-white/10 hover:border-[#00ddff]/50 transition-all"
     >
       <div className="aspect-square bg-white relative rounded-t-lg">
+        {deal.signal_label && (
+          <div
+            className={`absolute top-2 left-2 z-10 px-2 py-1 rounded text-xs font-bold shadow-lg ${SIGNAL_LABELS[deal.signal_label].className}`}
+          >
+            {SIGNAL_LABELS[deal.signal_label].text}
+          </div>
+        )}
         {deal.image_url ? (
           <img
             src={deal.image_url}

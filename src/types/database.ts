@@ -17,6 +17,10 @@ export type Price = {
   current_price: number;
   discount_percent: number;
   checked_at: string;
+  all_time_low: number | null;
+  low_90d: number | null;
+  low_30d: number | null;
+  previous_price: number | null;
 };
 
 export type Click = {
@@ -26,10 +30,18 @@ export type Click = {
   clicked_at: string;
 };
 
+// Signal label type
+export type SignalLabel = "historical_low" | "low_90d" | "low_30d" | "recent_drop" | null;
+
 // Combined type for deals (product + latest price)
 export type Deal = Product & {
   original_price: number;
   current_price: number;
   discount_percent: number;
   checked_at: string;
+  all_time_low: number | null;
+  low_90d: number | null;
+  low_30d: number | null;
+  previous_price: number | null;
+  signal_label: SignalLabel;
 };

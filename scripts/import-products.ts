@@ -75,21 +75,26 @@ function keepaPriceToUSD(price: number): number | null {
   return price / 100;
 }
 
+// Keepa time offset (minutes since Keepa epoch)
+const KEEPA_TIME_OFFSET = 21564000;
+
+// Convert Keepa timestamp to JS timestamp
+function keepaTimeToTimestamp(keepaTime: number): number {
+  return (keepaTime + KEEPA_TIME_OFFSET) * 60 * 1000;
+}
+
 // Get average price from Keepa price history (last 90 days)
 function getAveragePrice(priceHistory: number[] | null): number | null {
   if (!priceHistory || priceHistory.length < 2) return null;
 
-  // Keepa format: [time1, price1, time2, price2, ...]
-  // Get last 90 days of prices
   const now = Date.now();
   const ninetyDaysAgo = now - (90 * 24 * 60 * 60 * 1000);
-  const keepaTimeOffset = 21564000; // Keepa epoch offset in minutes
 
   const prices: number[] = [];
   for (let i = 0; i < priceHistory.length; i += 2) {
     const keepaTime = priceHistory[i];
     const price = priceHistory[i + 1];
-    const timestamp = (keepaTime + keepaTimeOffset) * 60 * 1000;
+    const timestamp = keepaTimeToTimestamp(keepaTime);
 
     if (timestamp >= ninetyDaysAgo && price > 0) {
       prices.push(price / 100);
@@ -98,6 +103,46 @@ function getAveragePrice(priceHistory: number[] | null): number | null {
 
   if (prices.length === 0) return null;
   return Math.round((prices.reduce((a, b) => a + b, 0) / prices.length) * 100) / 100;
+}
+
+// Get all-time lowest price from full price history
+function getAllTimeLow(priceHistory: number[] | null): number | null {
+  if (!priceHistory || priceHistory.length < 2) return null;
+
+  let lowest: number | null = null;
+  for (let i = 1; i < priceHistory.length; i += 2) {
+    const price = priceHistory[i];
+    if (price > 0) {
+      const priceUSD = price / 100;
+      if (lowest === null || priceUSD < lowest) {
+        lowest = priceUSD;
+      }
+    }
+  }
+  return lowest;
+}
+
+// Get lowest price in last N days
+function getLowestInDays(priceHistory: number[] | null, days: number): number | null {
+  if (!priceHistory || priceHistory.length < 2) return null;
+
+  const now = Date.now();
+  const cutoff = now - (days * 24 * 60 * 60 * 1000);
+
+  let lowest: number | null = null;
+  for (let i = 0; i < priceHistory.length; i += 2) {
+    const keepaTime = priceHistory[i];
+    const price = priceHistory[i + 1];
+    const timestamp = keepaTimeToTimestamp(keepaTime);
+
+    if (timestamp >= cutoff && price > 0) {
+      const priceUSD = price / 100;
+      if (lowest === null || priceUSD < lowest) {
+        lowest = priceUSD;
+      }
+    }
+  }
+  return lowest;
 }
 
 // Get current price from Keepa price history
@@ -179,6 +224,12 @@ async function importProducts() {
 
       const finalCurrentPrice = currentPrice || currentPriceNew;
       const finalAvgPrice = avgPrice || avgPriceNew;
+      const priceHistory = amazonPriceHistory || newPriceHistory;
+
+      // Calculate price metrics for signal labels
+      const allTimeLow = getAllTimeLow(priceHistory);
+      const low90d = getLowestInDays(priceHistory, 90);
+      const low30d = getLowestInDays(priceHistory, 30);
 
       if (!finalCurrentPrice) {
         console.log(`Skipping ${asin} (${title.substring(0, 40)}...): no price data`);
@@ -223,13 +274,23 @@ async function importProducts() {
           product_id: productData.id,
           original_price: originalPrice,
           current_price: finalCurrentPrice,
+          all_time_low: allTimeLow,
+          low_90d: low90d,
+          low_30d: low30d,
+          previous_price: null, // First import, no previous price
         });
 
       if (priceError) {
         console.error(`Error inserting price for ${asin}:`, priceError);
       }
 
-      console.log(`✓ ${displayName} | $${finalCurrentPrice} (avg: $${originalPrice}) | ${category}`);
+      // Determine signal label for logging
+      let signal = "";
+      if (allTimeLow && finalCurrentPrice <= allTimeLow) signal = " 🔥 HISTORICAL LOW";
+      else if (low90d && finalCurrentPrice <= low90d) signal = " ⭐ 90-DAY LOW";
+      else if (low30d && finalCurrentPrice <= low30d) signal = " 📉 30-DAY LOW";
+
+      console.log(`✓ ${displayName} | $${finalCurrentPrice} (avg: $${originalPrice}) | ${category}${signal}`);
       imported++;
 
     } catch (err) {

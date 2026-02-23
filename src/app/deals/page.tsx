@@ -1,6 +1,37 @@
 import { createClient } from "@/lib/supabase/server";
 import { DealCard } from "@/components/DealCard";
-import { Deal } from "@/types/database";
+import { Deal, SignalLabel } from "@/types/database";
+
+// Calculate signal label based on price metrics
+function getSignalLabel(
+  currentPrice: number,
+  allTimeLow: number | null,
+  low90d: number | null,
+  low30d: number | null,
+  previousPrice: number | null,
+  checkedAt: string
+): SignalLabel {
+  // Priority: Historical Low > 90-day Low > 30-day Low > Recent Drop
+  if (allTimeLow !== null && currentPrice <= allTimeLow) {
+    return "historical_low";
+  }
+  if (low90d !== null && currentPrice <= low90d) {
+    return "low_90d";
+  }
+  if (low30d !== null && currentPrice <= low30d) {
+    return "low_30d";
+  }
+  // Recent drop: price dropped since last check (within 24h)
+  if (previousPrice !== null && currentPrice < previousPrice) {
+    const checkedDate = new Date(checkedAt);
+    const now = new Date();
+    const hoursSinceCheck = (now.getTime() - checkedDate.getTime()) / (1000 * 60 * 60);
+    if (hoursSinceCheck <= 24) {
+      return "recent_drop";
+    }
+  }
+  return null;
+}
 
 async function getDeals(category?: string): Promise<Deal[]> {
   const supabase = await createClient();
@@ -13,7 +44,11 @@ async function getDeals(category?: string): Promise<Deal[]> {
         original_price,
         current_price,
         discount_percent,
-        checked_at
+        checked_at,
+        all_time_low,
+        low_90d,
+        low_30d,
+        previous_price
       )
     `)
     .eq("is_active", true)
@@ -36,6 +71,15 @@ async function getDeals(category?: string): Promise<Deal[]> {
       ? product.prices[0]
       : product.prices;
 
+    const signalLabel = getSignalLabel(
+      latestPrice.current_price,
+      latestPrice.all_time_low,
+      latestPrice.low_90d,
+      latestPrice.low_30d,
+      latestPrice.previous_price,
+      latestPrice.checked_at
+    );
+
     return {
       id: product.id,
       name: product.name,
@@ -50,6 +94,11 @@ async function getDeals(category?: string): Promise<Deal[]> {
       current_price: latestPrice.current_price,
       discount_percent: latestPrice.discount_percent,
       checked_at: latestPrice.checked_at,
+      all_time_low: latestPrice.all_time_low,
+      low_90d: latestPrice.low_90d,
+      low_30d: latestPrice.low_30d,
+      previous_price: latestPrice.previous_price,
+      signal_label: signalLabel,
     };
   });
 }
