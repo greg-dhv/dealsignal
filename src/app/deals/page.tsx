@@ -39,6 +39,7 @@ async function getDeals(category?: string): Promise<Deal[]> {
     return {
       id: product.id,
       name: product.name,
+      display_name: product.display_name,
       category: product.category,
       image_url: product.image_url,
       amazon_asin: product.amazon_asin,

@@ -31,7 +31,7 @@ export function DealCard({ deal, partnerSite }: DealCardProps) {
         {deal.image_url ? (
           <img
             src={deal.image_url}
-            alt={deal.name}
+            alt={deal.display_name || deal.name}
             className="absolute inset-0 w-full h-full object-contain p-4 group-hover:scale-105 transition-transform"
           />
         ) : (
@@ -50,7 +50,7 @@ export function DealCard({ deal, partnerSite }: DealCardProps) {
         </div>
 
         <h3 className="font-medium text-white mb-3 line-clamp-2 group-hover:text-[#00ddff] transition-colors">
-          {deal.name}
+          {deal.display_name || deal.name}
         </h3>
 
         <div className="flex items-baseline gap-2">

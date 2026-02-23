@@ -1,6 +1,7 @@
 export type Product = {
   id: string;
   name: string;
+  display_name: string | null;
   category: string;
   image_url: string | null;
   amazon_asin: string | null;
