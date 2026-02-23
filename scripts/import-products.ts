@@ -17,10 +17,7 @@ const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
 
 // ASINs to import
 const ASINS = [
-  "B0FSWTF7RY", "B0CTJ5F2FB", "B00N1YPXW2", "B0FRFZ9M66", "B0CWNJ7W12",
-  "B0C47ZX1WB", "B0F6JWQQB6", "B0DZCSBCLF", "B0G2LY516S", "B0FLVK4MT3",
-  "B0F1HX3WXX", "B0F1J1JTKP", "B0FH5YWH7B", "B0GCZNDC82", "B0CZX7MB48",
-  "B0FKB4RDTX", "B0B55T9RTP", "B08M3WY4RV"
+  "B08M3DLCW1", "B095KZMGHD", "B08M3S3VPY", "B086PKMZ21"
 ];
 
 // Remove duplicates
@@ -30,7 +27,7 @@ const uniqueASINs = [...new Set(ASINS)];
 async function generateDisplayName(title: string): Promise<string> {
   try {
     const response = await anthropic.messages.create({
-      model: "claude-3-5-haiku-latest",
+      model: "claude-sonnet-4-20250514",
       max_tokens: 100,
       messages: [
         {
