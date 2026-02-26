@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { DealCard } from "@/components/DealCard";
+import { DealsGrid } from "@/components/DealsGrid";
 import { Deal, SignalLabel } from "@/types/database";
 
 // Calculate signal label based on price metrics
@@ -33,10 +33,10 @@ function getSignalLabel(
   return null;
 }
 
-async function getDeals(category?: string): Promise<Deal[]> {
+async function getDeals(): Promise<Deal[]> {
   const supabase = await createClient();
 
-  let query = supabase
+  const { data, error } = await supabase
     .from("products")
     .select(`
       *,
@@ -54,12 +54,6 @@ async function getDeals(category?: string): Promise<Deal[]> {
     .eq("is_active", true)
     .gt("prices.discount_percent", 0)
     .order("checked_at", { referencedTable: "prices", ascending: false });
-
-  if (category) {
-    query = query.eq("category", category);
-  }
-
-  const { data, error } = await query;
 
   if (error) {
     console.error("Error fetching deals:", error);
@@ -84,7 +78,12 @@ async function getDeals(category?: string): Promise<Deal[]> {
       id: product.id,
       name: product.name,
       display_name: product.display_name,
+      teaser: product.teaser,
       category: product.category,
+      platforms: product.platforms || [],
+      retailer: product.retailer || "Amazon US",
+      rating: product.rating,
+      review_count: product.review_count,
       image_url: product.image_url,
       amazon_asin: product.amazon_asin,
       affiliate_url: product.affiliate_url,
@@ -120,62 +119,27 @@ async function getCategories(): Promise<string[]> {
 export default async function DealsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string; partner?: string }>;
+  searchParams: Promise<{ partner?: string }>;
 }) {
   const params = await searchParams;
-  const deals = await getDeals(params.category);
+  const deals = await getDeals();
   const categories = await getCategories();
 
   return (
     <main className="min-h-screen bg-[#0d1015] text-white">
-      <div className="max-w-6xl mx-auto px-4 py-12">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Gaming Deals</h1>
-          <p className="text-white/60">
-            We track prices daily and only show deals worth buying.
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold mb-1">Gaming Deals</h1>
+          <p className="text-white/50 text-sm">
+            Curated deals on gaming gear, updated daily.
           </p>
         </div>
 
-        {/* Category filters */}
-        <div className="flex flex-wrap gap-2 mb-8">
-          <a
-            href="/deals"
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-              !params.category
-                ? "bg-[#00ddff] text-[#0d1015]"
-                : "bg-white/10 text-white hover:bg-white/20"
-            }`}
-          >
-            All
-          </a>
-          {categories.map((cat) => (
-            <a
-              key={cat}
-              href={`/deals?category=${cat}`}
-              className={`px-4 py-2 rounded-full text-sm font-medium capitalize transition-colors ${
-                params.category === cat
-                  ? "bg-[#00ddff] text-[#0d1015]"
-                  : "bg-white/10 text-white hover:bg-white/20"
-              }`}
-            >
-              {cat}
-            </a>
-          ))}
-        </div>
-
-        {/* Deals grid */}
+        {/* Deals grid with filters */}
         {deals.length === 0 ? (
           <p className="text-white/50">No active deals right now.</p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {deals.map((deal) => (
-              <DealCard
-                key={deal.id}
-                deal={deal}
-                partnerSite={params.partner}
-              />
-            ))}
-          </div>
+          <DealsGrid deals={deals} categories={categories} partnerSite={params.partner} />
         )}
       </div>
     </main>

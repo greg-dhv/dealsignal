@@ -53,6 +53,38 @@ Reply with ONLY the display name, nothing else.`,
   }
 }
 
+// Generate a short teaser with key specs using Claude
+async function generateTeaser(title: string, features: string[] | null): Promise<string | null> {
+  try {
+    const featuresText = features?.length ? features.slice(0, 5).join("\n- ") : "";
+
+    const response = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 100,
+      messages: [
+        {
+          role: "user",
+          content: `Extract 2-4 key specs/features from this gaming product. Format as short bullet points separated by " • " (bullet point symbol). Focus on: performance specs, connectivity, compatibility, standout features. Max 60 characters total.
+
+Title: "${title}"
+${featuresText ? `\nFeatures:\n- ${featuresText}` : ""}
+
+Reply with ONLY the specs like: "7.1 Surround • 50mm Drivers • Wireless"`,
+        },
+      ],
+    });
+
+    const content = response.content[0];
+    if (content.type === "text") {
+      return content.text.trim();
+    }
+    return null;
+  } catch (err) {
+    console.error("Error generating teaser:", err);
+    return null;
+  }
+}
+
 // Category mapping based on common gaming product keywords
 function detectCategory(title: string): string {
   const lower = title.toLowerCase();
@@ -67,6 +99,45 @@ function detectCategory(title: string): string {
   if (lower.includes("webcam") || lower.includes("camera")) return "webcams";
   if (lower.includes("glasses")) return "gaming glasses";
   return "accessories";
+}
+
+// Detect platforms from product title
+type Platform = "PC" | "Xbox" | "PS5";
+
+function detectPlatforms(title: string, category: string): Platform[] {
+  const lower = title.toLowerCase();
+  const platforms: Platform[] = [];
+
+  // Check for Xbox
+  if (lower.includes("xbox") || lower.includes("xsx") || lower.includes("series x") || lower.includes("series s")) {
+    platforms.push("Xbox");
+  }
+
+  // Check for PlayStation
+  if (lower.includes("ps5") || lower.includes("ps4") || lower.includes("playstation") || lower.includes("dualsense")) {
+    platforms.push("PS5");
+  }
+
+  // Check for PC
+  if (lower.includes(" pc") || lower.includes("pc ") || lower.includes("/pc") || lower.includes("pc/") ||
+      lower.includes("windows") || lower.includes("usb") || lower.includes("wired")) {
+    platforms.push("PC");
+  }
+
+  // If no platform detected, infer from category
+  if (platforms.length === 0) {
+    // These categories are typically PC-compatible
+    const pcCategories = ["mice", "keyboards", "monitors", "mousepads", "microphones", "webcams", "chairs", "gaming glasses"];
+    if (pcCategories.includes(category)) {
+      platforms.push("PC");
+    }
+    // Headsets and controllers could be any platform, default to all
+    if (category === "headsets" || category === "controllers") {
+      platforms.push("PC", "Xbox", "PS5");
+    }
+  }
+
+  return platforms;
 }
 
 // Keepa price is in cents, -1 means unavailable
@@ -172,7 +243,7 @@ function buildImageUrl(imagesCSV: string | null): string | null {
 // Fetch products from Keepa API (batch of up to 100)
 async function fetchFromKeepa(asins: string[]): Promise<any[]> {
   const asinString = asins.join(",");
-  const url = `https://api.keepa.com/product?key=${KEEPA_API_KEY}&domain=1&asin=${asinString}&stats=90`;
+  const url = `https://api.keepa.com/product?key=${KEEPA_API_KEY}&domain=1&asin=${asinString}&stats=90&rating=1`;
 
   console.log(`Fetching ${asins.length} products from Keepa...`);
 
@@ -238,11 +309,41 @@ async function importProducts() {
       }
 
       const category = detectCategory(title);
+      const platforms = detectPlatforms(title, category);
       const imageUrl = buildImageUrl(product.imagesCSV);
       const affiliateUrl = `https://www.amazon.com/dp/${asin}?tag=${AMAZON_TAG}`;
 
-      // Generate clean display name
+      // Generate clean display name and teaser
       const displayName = await generateDisplayName(title);
+      const teaser = await generateTeaser(title, product.features || null);
+
+      // Extract rating and review count
+      // Try stats.current first, then fall back to csv arrays
+      let rawRating = product.stats?.current?.[16];
+      let rawReviewCount = product.stats?.current?.[17];
+
+      // If stats doesn't have it, try getting last value from csv arrays
+      if ((!rawRating || rawRating < 0) && product.csv?.[16]?.length >= 2) {
+        const ratingHistory = product.csv[16];
+        for (let i = ratingHistory.length - 1; i >= 1; i -= 2) {
+          if (ratingHistory[i] > 0) {
+            rawRating = ratingHistory[i];
+            break;
+          }
+        }
+      }
+      if ((!rawReviewCount || rawReviewCount < 0) && product.csv?.[17]?.length >= 2) {
+        const reviewHistory = product.csv[17];
+        for (let i = reviewHistory.length - 1; i >= 1; i -= 2) {
+          if (reviewHistory[i] > 0) {
+            rawReviewCount = reviewHistory[i];
+            break;
+          }
+        }
+      }
+
+      const rating = rawRating && rawRating > 0 ? rawRating / 10 : null;
+      const reviewCount = rawReviewCount && rawReviewCount > 0 ? rawReviewCount : null;
 
       // Insert into products table
       const { data: productData, error: productError } = await supabase
@@ -251,7 +352,12 @@ async function importProducts() {
           amazon_asin: asin,
           name: title,
           display_name: displayName,
+          teaser: teaser,
           category: category,
+          platforms: platforms,
+          retailer: "Amazon US",
+          rating: rating,
+          review_count: reviewCount,
           image_url: imageUrl,
           affiliate_url: affiliateUrl,
           is_active: true,
@@ -290,7 +396,9 @@ async function importProducts() {
       else if (low90d && finalCurrentPrice <= low90d) signal = " ⭐ 90-DAY LOW";
       else if (low30d && finalCurrentPrice <= low30d) signal = " 📉 30-DAY LOW";
 
-      console.log(`✓ ${displayName} | $${finalCurrentPrice} (avg: $${originalPrice}) | ${category}${signal}`);
+      const ratingStr = rating ? `★${rating}` : "";
+      console.log(`✓ ${displayName} | $${finalCurrentPrice} | ${ratingStr}${signal}`);
+      if (teaser) console.log(`  → ${teaser}`);
       imported++;
 
     } catch (err) {

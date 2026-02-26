@@ -77,7 +77,7 @@ function getLowestInDays(priceHistory: number[] | null, days: number): number | 
 // Fetch products from Keepa API
 async function fetchFromKeepa(asins: string[]): Promise<any[]> {
   const asinString = asins.join(",");
-  const url = `https://api.keepa.com/product?key=${KEEPA_API_KEY}&domain=1&asin=${asinString}&stats=90`;
+  const url = `https://api.keepa.com/product?key=${KEEPA_API_KEY}&domain=1&asin=${asinString}&stats=90&rating=1`;
 
   const response = await fetch(url);
   const data = await response.json();
@@ -158,6 +158,45 @@ export async function GET(request: Request) {
         const low90d = getLowestInDays(priceHistory, 90);
         const low30d = getLowestInDays(priceHistory, 30);
 
+        // Extract rating and review count
+        // Try stats.current first, then fall back to csv arrays
+        // stats.current[16] = rating * 10, csv[16] = rating history
+        // stats.current[17] = review count, csv[17] = review count history
+        let rawRating = keepaProduct.stats?.current?.[16];
+        let rawReviewCount = keepaProduct.stats?.current?.[17];
+
+        // If stats doesn't have it, try getting last value from csv arrays
+        if ((!rawRating || rawRating < 0) && keepaProduct.csv?.[16]?.length >= 2) {
+          // csv format: [time, value, time, value, ...] - get last value
+          const ratingHistory = keepaProduct.csv[16];
+          for (let i = ratingHistory.length - 1; i >= 1; i -= 2) {
+            if (ratingHistory[i] > 0) {
+              rawRating = ratingHistory[i];
+              break;
+            }
+          }
+        }
+        if ((!rawReviewCount || rawReviewCount < 0) && keepaProduct.csv?.[17]?.length >= 2) {
+          const reviewHistory = keepaProduct.csv[17];
+          for (let i = reviewHistory.length - 1; i >= 1; i -= 2) {
+            if (reviewHistory[i] > 0) {
+              rawReviewCount = reviewHistory[i];
+              break;
+            }
+          }
+        }
+
+        const rating = rawRating && rawRating > 0 ? rawRating / 10 : null;
+        const reviewCount = rawReviewCount && rawReviewCount > 0 ? rawReviewCount : null;
+
+        // Update product with rating
+        if (rating !== null || reviewCount !== null) {
+          await supabase
+            .from("products")
+            .update({ rating, review_count: reviewCount })
+            .eq("id", product.id);
+        }
+
         // Insert new price record
         const { error: insertError } = await supabase.from("prices").insert({
           product_id: product.id,
@@ -173,7 +212,8 @@ export async function GET(request: Request) {
           console.error(`Error updating price for ${product.amazon_asin}:`, insertError);
           failed++;
         } else {
-          console.log(`Updated ${product.amazon_asin}: $${currentPrice}`);
+          const ratingStr = rating ? ` ★${rating}` : "";
+          console.log(`Updated ${product.amazon_asin}: $${currentPrice}${ratingStr}`);
           updated++;
         }
       }

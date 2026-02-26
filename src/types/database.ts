@@ -1,8 +1,15 @@
+export type Platform = "PC" | "Xbox" | "PS5";
+
 export type Product = {
   id: string;
   name: string;
   display_name: string | null;
+  teaser: string | null;
   category: string;
+  platforms: Platform[];
+  retailer: string;
+  rating: number | null;
+  review_count: number | null;
   image_url: string | null;
   amazon_asin: string | null;
   affiliate_url: string | null;

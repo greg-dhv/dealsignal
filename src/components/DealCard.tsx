@@ -7,6 +7,7 @@ type DealCardProps = {
   partnerSite?: string;
 };
 
+
 const SIGNAL_LABELS: Record<Exclude<SignalLabel, null>, { text: string; className: string }> = {
   historical_low: {
     text: "Historical Low",
@@ -75,18 +76,47 @@ export function DealCard({ deal, partnerSite }: DealCardProps) {
           </span>
         </div>
 
-        <h3 className="font-medium text-white mb-3 line-clamp-2 group-hover:text-[#00ddff] transition-colors">
+        {/* Fixed height for 2 lines to keep cards aligned */}
+        <h3 className="font-medium text-white mb-1 line-clamp-2 min-h-[3rem] group-hover:text-[#00ddff] transition-colors">
           {deal.display_name || deal.name}
         </h3>
 
-        <div className="flex items-baseline gap-2">
-          <span className="text-lg font-bold text-[#35ffb5]">
-            ${deal.current_price}
-          </span>
-          <span className="text-sm text-white/50 line-through">
-            ${deal.original_price}
+        {/* Teaser - key specs */}
+        {deal.teaser && (
+          <p className="text-xs text-white/50 mb-3 truncate">
+            {deal.teaser}
+          </p>
+        )}
+        {!deal.teaser && <div className="mb-3" />}
+
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-baseline gap-2">
+            <span className="text-lg font-bold text-[#35ffb5]">
+              ${deal.current_price}
+            </span>
+            <span className="text-sm text-white/50 line-through">
+              ${deal.original_price}
+            </span>
+          </div>
+
+          {/* Retailer */}
+          <span className="text-xs text-orange-400">
+            {deal.retailer}
           </span>
         </div>
+
+        {/* Rating */}
+        {deal.rating && (
+          <div className="flex items-center gap-1 text-xs text-white/60">
+            <span className="text-yellow-400">★</span>
+            <span>{deal.rating.toFixed(1)}</span>
+            {deal.review_count && (
+              <span className="text-white/40">
+                ({deal.review_count.toLocaleString()})
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </a>
   );
