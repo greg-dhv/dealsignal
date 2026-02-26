@@ -81,13 +81,13 @@ export function DealCard({ deal, partnerSite }: DealCardProps) {
           {deal.display_name || deal.name}
         </h3>
 
-        {/* Teaser - key specs */}
+        {/* Teaser - key specs (2 lines) */}
         {deal.teaser && (
-          <p className="text-xs text-white/50 mb-3 truncate">
+          <p className="text-xs text-white/50 mb-3 line-clamp-2 min-h-[2rem]">
             {deal.teaser}
           </p>
         )}
-        {!deal.teaser && <div className="mb-3" />}
+        {!deal.teaser && <div className="mb-3 min-h-[2rem]" />}
 
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-baseline gap-2">

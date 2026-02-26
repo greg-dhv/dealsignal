@@ -126,13 +126,14 @@ function detectPlatforms(title: string, category: string): Platform[] {
 
   // If no platform detected, infer from category
   if (platforms.length === 0) {
-    // These categories are typically PC-compatible
-    const pcCategories = ["mice", "keyboards", "monitors", "mousepads", "microphones", "webcams", "chairs", "gaming glasses"];
+    // These categories are typically PC-only
+    const pcCategories = ["mice", "keyboards", "monitors", "mousepads", "gaming glasses"];
     if (pcCategories.includes(category)) {
       platforms.push("PC");
     }
-    // Headsets and controllers could be any platform, default to all
-    if (category === "headsets" || category === "controllers") {
+    // These categories work across all platforms
+    const allPlatformCategories = ["headsets", "controllers", "microphones", "webcams", "chairs"];
+    if (allPlatformCategories.includes(category)) {
       platforms.push("PC", "Xbox", "PS5");
     }
   }

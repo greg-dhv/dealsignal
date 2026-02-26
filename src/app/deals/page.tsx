@@ -125,14 +125,32 @@ export default async function DealsPage({
   const deals = await getDeals();
   const categories = await getCategories();
 
+  // Get the latest checked_at timestamp from deals
+  const lastUpdated = deals.length > 0
+    ? new Date(deals[0].checked_at).toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      })
+    : null;
+
   return (
     <main className="min-h-screen bg-[#0d1015] text-white">
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold mb-1">Gaming Deals</h1>
-          <p className="text-white/50 text-sm">
-            Curated deals on gaming gear, updated daily.
-          </p>
+        <div className="mb-6 flex items-end justify-between">
+          <div>
+            <h1 className="text-2xl font-bold mb-1">Gaming Deals</h1>
+            <p className="text-white/50 text-sm">
+              Curated deals on gaming gear, updated hourly.
+            </p>
+          </div>
+          {lastUpdated && (
+            <p className="text-white/40 text-xs">
+              Last updated: {lastUpdated}
+            </p>
+          )}
         </div>
 
         {/* Deals grid with filters */}
