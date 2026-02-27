@@ -37,6 +37,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const category = searchParams.get("category");
   const platform = searchParams.get("platform");
+  const region = searchParams.get("region");
   const limitParam = searchParams.get("limit");
 
   const supabase = await createClient();
@@ -67,6 +68,10 @@ export async function GET(request: Request) {
 
   if (platform) {
     query = query.contains("platforms", [platform]);
+  }
+
+  if (region) {
+    query = query.eq("region", region);
   }
 
   if (limitParam) {
@@ -102,6 +107,7 @@ export async function GET(request: Request) {
       category: product.category,
       platforms: product.platforms || [],
       retailer: product.retailer || "Amazon US",
+      region: product.region || "US",
       rating: product.rating,
       review_count: product.review_count,
       image_url: product.image_url,

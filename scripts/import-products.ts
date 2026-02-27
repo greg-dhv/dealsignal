@@ -7,10 +7,29 @@ config({ path: ".env.local" });
 
 // Configuration
 const KEEPA_API_KEY = "8eu8vlvvp5ho0v18jtgjfcvoou02au4iicv72ij6ub5bgdohcbr1qc8493bi1k9p";
-const AMAZON_TAG = "wzstats-20";
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY!;
+
+// Region configuration - Keepa domain IDs map to regions
+// domain=1: US, domain=2: UK, domain=3: DE, domain=4: FR, domain=5: JP, domain=6: CA, domain=9: AU
+type Region = "US" | "UK" | "DE" | "FR" | "CA" | "JP" | "AU";
+
+const AMAZON_TAG = "wzstats-20"; // Same affiliate tag for all regions
+
+const REGION_CONFIG: Record<Region, { domain: number; retailer: string; urlBase: string }> = {
+  US: { domain: 1, retailer: "Amazon US", urlBase: "https://www.amazon.com" },
+  UK: { domain: 2, retailer: "Amazon UK", urlBase: "https://www.amazon.co.uk" },
+  DE: { domain: 3, retailer: "Amazon DE", urlBase: "https://www.amazon.de" },
+  FR: { domain: 4, retailer: "Amazon FR", urlBase: "https://www.amazon.fr" },
+  JP: { domain: 5, retailer: "Amazon JP", urlBase: "https://www.amazon.co.jp" },
+  CA: { domain: 6, retailer: "Amazon CA", urlBase: "https://www.amazon.ca" },
+  AU: { domain: 9, retailer: "Amazon AU", urlBase: "https://www.amazon.com.au" },
+};
+
+// Current import region (change this to import from different regions)
+const IMPORT_REGION: Region = "US";
+const { domain: KEEPA_DOMAIN, retailer: RETAILER, urlBase: AMAZON_URL } = REGION_CONFIG[IMPORT_REGION];
 
 // Initialize Anthropic client
 const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
@@ -244,7 +263,7 @@ function buildImageUrl(imagesCSV: string | null): string | null {
 // Fetch products from Keepa API (batch of up to 100)
 async function fetchFromKeepa(asins: string[]): Promise<any[]> {
   const asinString = asins.join(",");
-  const url = `https://api.keepa.com/product?key=${KEEPA_API_KEY}&domain=1&asin=${asinString}&stats=90&rating=1`;
+  const url = `https://api.keepa.com/product?key=${KEEPA_API_KEY}&domain=${KEEPA_DOMAIN}&asin=${asinString}&stats=90&rating=1`;
 
   console.log(`Fetching ${asins.length} products from Keepa...`);
 
@@ -312,7 +331,7 @@ async function importProducts() {
       const category = detectCategory(title);
       const platforms = detectPlatforms(title, category);
       const imageUrl = buildImageUrl(product.imagesCSV);
-      const affiliateUrl = `https://www.amazon.com/dp/${asin}?tag=${AMAZON_TAG}`;
+      const affiliateUrl = `${AMAZON_URL}/dp/${asin}?tag=${AMAZON_TAG}`;
 
       // Generate clean display name and teaser
       const displayName = await generateDisplayName(title);
@@ -356,7 +375,8 @@ async function importProducts() {
           teaser: teaser,
           category: category,
           platforms: platforms,
-          retailer: "Amazon US",
+          retailer: RETAILER,
+          region: IMPORT_REGION,
           rating: rating,
           review_count: reviewCount,
           image_url: imageUrl,

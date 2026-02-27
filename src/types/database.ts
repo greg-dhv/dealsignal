@@ -1,5 +1,8 @@
 export type Platform = "PC" | "Xbox" | "PS5";
 
+// Supported regions for geo-targeting
+export type Region = "US" | "UK" | "DE" | "FR" | "CA" | "JP" | "AU";
+
 export type Product = {
   id: string;
   name: string;
@@ -8,6 +11,7 @@ export type Product = {
   category: string;
   platforms: Platform[];
   retailer: string;
+  region: Region;
   rating: number | null;
   review_count: number | null;
   image_url: string | null;
